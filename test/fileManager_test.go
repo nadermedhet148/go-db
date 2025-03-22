@@ -5,6 +5,8 @@ import (
 	"db/manager/v2/src/utils"
 	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateFile(t *testing.T) {
@@ -17,8 +19,15 @@ func TestCreateFile(t *testing.T) {
 	jsonData, err := json.Marshal(data)
 	utils.HandleError(err)
 
-	for i := 0; i < 100000; i++ {
-		tableManager.WriteToTable(jsonData)
+	tableManager.WriteToTable(jsonData)
+
+	readData := tableManager.ReadAllFromTable()
+
+	for key := range readData {
+		val := tableManager.ReadFromTable(key)
+		assert.Equal(t, readData[key], val)
+
+		break
 	}
 
 }

@@ -4,6 +4,7 @@ import (
 	"db/manager/v2/src/storage_manager"
 	"db/manager/v2/src/utils"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -133,4 +134,38 @@ func (tm *TableManager) FlushWalToTable() map[string]string {
 
 	utils.HandleError(tm.WAL.Clear())
 	return groupedData
+}
+
+func (tm *TableManager) ReadFromTable(id string) string {
+	data, err := tm.FileManager.ReadFromFile()
+	utils.HandleError(err)
+
+	var unmarshaledData map[string]interface{}
+	if len(data) == 0 {
+		unmarshaledData = make(map[string]interface{})
+	} else {
+		err = json.Unmarshal(data, &unmarshaledData)
+		utils.HandleError(err)
+	}
+
+	value, ok := unmarshaledData[id].(string)
+	if !ok {
+		utils.HandleError(fmt.Errorf("value for id %s is not a string", id))
+	}
+	return value
+}
+
+func (tm *TableManager) ReadAllFromTable() map[string]string {
+	data, err := tm.FileManager.ReadFromFile()
+	utils.HandleError(err)
+
+	var unmarshaledData map[string]string
+	if len(data) == 0 {
+		unmarshaledData = make(map[string]string)
+	} else {
+		err = json.Unmarshal(data, &unmarshaledData)
+		utils.HandleError(err)
+	}
+
+	return unmarshaledData
 }
