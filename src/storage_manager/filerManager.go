@@ -53,6 +53,21 @@ func (fm *FileManager) WriteToFile(data []byte) error {
 	return err
 }
 
+// UpdateFileContent replaces the entire content of the file with the provided data.
+func (fm *FileManager) UpdateFileContent(data []byte) error {
+	fm.mu.Lock()
+	defer fm.mu.Unlock()
+
+	file, err := os.OpenFile(fm.filePath+"/"+fm.fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(data)
+	return err
+}
+
 // ReadFromFile reads data from a file in a thread-safe manner.
 func (fm *FileManager) ReadFromFile() ([]byte, error) {
 	fm.mu.Lock()

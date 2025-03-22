@@ -3,6 +3,7 @@ package data_manager
 import (
 	"db/manager/v2/src/storage_manager"
 	"db/manager/v2/src/utils"
+	"encoding/json"
 	"strings"
 
 	"github.com/google/uuid"
@@ -17,7 +18,7 @@ type TableManager struct {
 // NewTableManager creates a new TableManager with the specified table name.
 func NewTableManager(tableName string) *TableManager {
 
-	fileManager := storage_manager.NewFileManager("/home/nader/projects/go-db/test"+tableName+".json", tableName)
+	fileManager := storage_manager.NewFileManager("/home/nader/projects/go-db/test", tableName)
 	wal, err := storage_manager.NewWAL(tableName)
 	if err != nil {
 		panic(err)
@@ -72,6 +73,41 @@ func (tm *TableManager) FlushWalToTable() map[string]string {
 			groupedData[transactionID] += content
 		}
 	}
+
+	// Remove transactions that are not ended
+	for transactionID := range groupedData {
+		found := false
+		for _, endedID := range endedTransactions {
+			if transactionID == endedID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			delete(groupedData, transactionID)
+		}
+	}
+
+	tableData, err := tm.FileManager.ReadFromFile()
+
+	utils.HandleError(err)
+
+	var unmarshaledData map[string]interface{}
+	if len(tableData) == 0 {
+		unmarshaledData = make(map[string]interface{})
+	} else {
+		err = json.Unmarshal(tableData, &unmarshaledData)
+		utils.HandleError(err)
+	}
+
+	for transactionID, content := range groupedData {
+		unmarshaledData[transactionID] = content
+	}
+
+	updatedData, err := json.Marshal(unmarshaledData)
+	utils.HandleError(err)
+
+	utils.HandleError(tm.FileManager.UpdateFileContent(updatedData))
 
 	return groupedData
 }
