@@ -10,7 +10,7 @@ type WAL struct {
 func NewWAL(fileName string) (*WAL, error) {
 
 	// Create the file if it does not exist
-	fileManager := NewFileManager("/home/nader/projects/go-db/test", fileName+".txt")
+	fileManager := NewFileManager("/home/nader/projects/go-db/test", fileName, "txt")
 	err := fileManager.CreateIfNotExists()
 	if err != nil {
 		return nil, err
@@ -49,4 +49,14 @@ func (wal *WAL) WriteTransactionEntry(trxID string, data []byte) error {
 // ReadEntry reads an entry from the WAL.
 func (wal *WAL) ReadEntries() ([]byte, error) {
 	return wal.FileManager.ReadFromFile()
+}
+
+// Clear clears all entries in the WAL.
+func (wal *WAL) Clear() error {
+	return wal.FileManager.ClearFile()
+}
+
+// GetFileSize returns the size of the WAL file in bytes.
+func (wal *WAL) GetFileSize() (int64, error) {
+	return wal.FileManager.GetFileSize()
 }

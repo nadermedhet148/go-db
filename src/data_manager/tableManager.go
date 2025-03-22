@@ -4,6 +4,8 @@ import (
 	"db/manager/v2/src/storage_manager"
 	"db/manager/v2/src/utils"
 	"encoding/json"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -18,7 +20,7 @@ type TableManager struct {
 // NewTableManager creates a new TableManager with the specified table name.
 func NewTableManager(tableName string) *TableManager {
 
-	fileManager := storage_manager.NewFileManager("/home/nader/projects/go-db/test", tableName)
+	fileManager := storage_manager.NewFileManager("/home/nader/projects/go-db/test", tableName, "json")
 	wal, err := storage_manager.NewWAL(tableName)
 	if err != nil {
 		panic(err)
@@ -31,12 +33,32 @@ func NewTableManager(tableName string) *TableManager {
 }
 
 func (tm *TableManager) WriteToTable(data []byte) {
-
 	id := uuid.New().String()
 	utils.HandleError(tm.WAL.StartTransaction(id))
 	utils.HandleError(tm.WAL.WriteTransactionEntry(id, data))
 	utils.HandleError(tm.WAL.EndTransaction(id))
+
+	sizeLimit := tm.getWalFileSizeLimit()
+
+	walSize, err := tm.WAL.GetFileSize()
+	utils.HandleError(err)
+
+	if walSize >= int64(sizeLimit) {
+		tm.FlushWalToTable()
+	}
 }
+
+func (tm *TableManager) getWalFileSizeLimit() float64 {
+	const defaultSizeLimit = 0.5 * 1024 * 1024 // 0.5 MB in bytes
+	sizeLimit := defaultSizeLimit
+	if envLimit, exists := os.LookupEnv("WAL_FILE_SIZE_LIMIT_MB"); exists {
+		if parsedLimit, err := strconv.ParseFloat(envLimit, 64); err == nil && parsedLimit > 0 {
+			sizeLimit = parsedLimit * 1024 * 1024 // Convert MB to bytes
+		}
+	}
+	return sizeLimit
+}
+
 func (tm *TableManager) FlushWalToTable() map[string]string {
 	dataBytes, err := tm.WAL.ReadEntries()
 	utils.HandleError(err)
@@ -109,5 +131,6 @@ func (tm *TableManager) FlushWalToTable() map[string]string {
 
 	utils.HandleError(tm.FileManager.UpdateFileContent(updatedData))
 
+	utils.HandleError(tm.WAL.Clear())
 	return groupedData
 }

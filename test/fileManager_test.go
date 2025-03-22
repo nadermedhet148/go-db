@@ -16,10 +16,9 @@ func TestCreateFile(t *testing.T) {
 	}
 	jsonData, err := json.Marshal(data)
 	utils.HandleError(err)
-	tableManager.WriteToTable(jsonData)
 
-	var result = tableManager.FlushWalToTable()
-
-	print(result)
+	for i := 0; i < 100000; i++ {
+		tableManager.WriteToTable(jsonData)
+	}
 
 }
